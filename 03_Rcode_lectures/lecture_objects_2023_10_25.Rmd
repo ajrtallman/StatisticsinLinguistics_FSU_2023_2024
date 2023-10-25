@@ -1,0 +1,201 @@
+---
+title: "R prep. lecture notes 2023-10-25 (R Objects)"
+author: "Adam Tallman"
+date: "2023-10-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+###Vector concepts
+
+There are six main ``vector concepts" to learn; atomic vector, double, integer, character, logical, and coercion.
+
+An *atomic vector* is just a set of elements. We call it ``atomic" because its just one. You can make a vector with the function c().
+
+```{r}
+things <- c(7,6,5,4,3,2,1)
+```
+
+You can test whether something is a vector or not , with the function is.vector() and you can ask about the length of the vector using length(). We call functions like is.vector ``logical operators" because they give a true or false answer.
+```{r}
+is.vector(things)
+length(things)
+```
+
+We can also identify positions in the vector
+
+```{r}
+things[3]
+```
+
+A *double* is a number that *can* has decimals after. We can also call this a *numeric*, which is probably the more common term. A double vector would be a vector of doubles. The vector we created above would be an example.
+
+An *integer* is a number that cannot have decimals. You can specifically create an integer value using uppercase L. 
+
+```{r}
+3L
+```
+```{r}
+things_2 <- c(-1L, 2L, 4L)
+typeof(things_2)
+
+```
+R only saves a nuber as an integer if you include the L otherwise it'll save it as a double. 
+
+The only reason to ever use integers as opposed to numbers is because of *floating point errors*, whch is part of all mathematics done by computers.
+
+```{r}
+sqrt(2)^2-2
+```
+A *character* is some text. You write a character with quotations around it.
+
+```{r}
+text <- c("Please", "write", "down", "the", "answer", "now", "everyone")
+```
+
+```{r}
+typeof(text)
+```
+R can also do Boolean logic
+
+```{r}
+3>4
+```
+
+```{r}
+4>3
+```
+```{r}
+"class" %in% text
+```
+
+```{r}
+"write" %in% text
+```
+
+You can also have a vector that is just true or false values
+
+```{r}
+things_3 <- c(TRUE, FALSE, FALSE, TRUE) 
+
+
+```
+
+Finally, note that a single vector will be saved as one of the types. If you have a single vector with a bunch of numbers, the vector will be saved as a character type.
+
+
+```{r}
+things_4 <- c(2,3,5,7,"thing")
+```
+
+
+```{r}
+typeof(things_4)
+```
+
+A vector you might think is a numeric vector in fact isn't. Vectors can be coerced but only in certain directions.
+
+```{r}
+as.numeric(things_3)
+as.character(things)
+```
+So intuitively it might make sense t get the sum of numbers of things_4, but it doesn't work
+
+```{r}
+sum(things_4)
+```
+
+
+We could only make things_4 a numeric vector if we removed the final value. let's find the value, with the function match(). match() takes two arguments
+
+```{r}
+things_4 <- c(2,3,5,7,"thing")
+
+match("thing", things_4)
+
+```
+
+Then we can remove that value, like so
+
+```{r}
+things_4[-5]
+```
+
+We can *reassign* a value to something else.
+
+```{r}
+things_4 <- things_4[-5]
+things_4
+```
+We still can't sum over the value yet.
+
+```{r}
+sum(things_4)
+```
+
+But now we can change thsoe numbers to actual numbers because there's no more character strings in there. 
+
+```{r}
+as.numeric(things_4)
+```
+
+That works, so we can reassign things_4 as numeric value and then sum over it
+
+```{r}
+things_4 <- as.numeric(things_4)
+sum(things_4)
+
+```
+
+##Non-atomic vectors
+
+Matrices are stored values in two-dimensions. The first argument gives you the number of rows and the second the number of columns
+
+```{r}
+matrix(3,3,2)
+```
+```{r}
+matrix(c(1,2,3,4,5,6), 2,3)
+```
+
+You can change some atomic vector into a matrix with as.matrix().
+
+```{r}
+as.matrix(things)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
