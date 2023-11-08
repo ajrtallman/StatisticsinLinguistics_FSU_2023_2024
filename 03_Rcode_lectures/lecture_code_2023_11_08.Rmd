@@ -1,0 +1,94 @@
+---
+title: "Lecture_notes_2023_11_08"
+author: "Adam Tallman"
+date: "2023-11-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+```{r}
+nettle <- read.csv("/Users/Adan Tallman/Desktop/StatisticsinLinguistics_FSU_2023_2024/07_data/nettle_1999_climate.csv")
+```
+
+You can look at the first six rows of a dataset with the function head()
+
+```{r}
+head(nettle)
+```
+You can get the last 6 rows by using the function tail()
+
+```{r}
+tail(nettle)
+```
+
+You can get a summary of the variables with the function summary().
+
+```{r}
+summary(nettle)
+```
+
+
+```{r}
+scatter_01 <- plot(nettle$Population~nettle$Langs, ylab="Popuation size", xlab="Languages")
+
+```
+
+```{r}
+scatter_01 <- plot(nettle$Population~nettle$Area, ylab="Popuation size", xlab="Area")
+
+```
+
+```{r}
+vowels <- read.csv("/Users/Adan Tallman/Desktop/StatisticsinLinguistics_FSU_2023_2024/07_data/vowels2.csv")
+```
+
+```{r}
+plot(vowels$duration~vowels$intensity, xlab="Duration (ms)", ylab ="Intensity (db)")
+```
+
+We can make a histogram
+
+```{r}
+hist(nettle$Langs, col="salmon")
+```
+
+
+Frequency of words
+
+```{r}
+words <- read.csv("/Users/Adan Tallman/Desktop/StatisticsinLinguistics_FSU_2023_2024/07_data/ELP_frequency.csv")
+
+hist(words$Freq, main="Frequency of words", breaks=50)
+
+```
+
+
+There are a number of types of distributions: normal and uniform.
+
+
+```{r}
+rnorm(10, 4, 2)
+```
+
+```{r}
+runif(10, min=1, max=2)
+```
+
+
+
+
+```{r}
+boxplot(vowels$duration~vowels$stress, ylab="Duration (ms)", xlab="Stressed versus nonstressed")
+```
+
+
+```{r}
+d<- density(nettle$Langs)
+plot(d)
+
+```
+
