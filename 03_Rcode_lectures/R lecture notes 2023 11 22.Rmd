@@ -1,0 +1,240 @@
+---
+title: "Stats Lecture 2023-11-22"
+author: "Adam Tallman"
+date: "2023-11-22"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## P-values review
+
+install the follwing packages 
+
+```{r}
+library(nhstplot)
+library(rlist)
+```
+
+
+
+```{r}
+set.seed(1234)
+n <- 30
+vowel.durations <- rnorm(n, mean = 80, sd=10)
+h1 <- c("strong","weak")
+h1 <- sample(h1, n, replace=TRUE, prob=c(0.5, 0.5))
+h2 <- c("strong","weak")
+h2 <- sample(h2, n, replace=TRUE, prob=c(0.5, 0.5))
+h3 <- c("strong","weak")
+h3 <- sample(h3, n, replace=TRUE, prob=c(0.5, 0.5))
+h4 <- c("strong","weak")
+h4 <- sample(h4, n, replace=TRUE, prob=c(0.5, 0.5))
+h5 <- c("strong","weak")
+h5 <- sample(h5, n, replace=TRUE, prob=c(0.5, 0.5))
+h6 <- c("strong","weak")
+h6 <- sample(h6, n, replace=TRUE, prob=c(0.5, 0.5))
+df <- data.frame(vowel.durations, h1,h2,h3,h4,h5,h6)
+plotttest(t.test(vowel.durations~h4, data=df))
+
+```
+
+Try it for different hypotheses, you should get different results. This allows you to model a Type II error
+
+
+Let's model a Type I error:
+
+```{r}
+set.seed(123)
+n <- 5
+strong.vowels <- rnorm(n, mean = 85, sd = 10)
+weak.vowels <- rnorm(n, mean = 80, sd = 10)
+strong <- rep("yes", times =n, length.out=n)
+weak <- rep("no", times =n, length.out=n)
+vowel.durations <- list.append(strong.vowels, weak.vowels)
+prominence <- list.append(strong, weak)
+t <- (mean(strong.vowels) - mean(weak.vowels)) / (sqrt((var(strong.vowels)/n) + (var(weak.vowels)/n)))
+t
+
+```
+We can see that the p-val is higher than 0.05 
+
+```{r}
+plotttest(t.test(vowel.durations~prominence), tails = "one")
+
+```
+
+
+##Linear models
+
+Let's look at a simple linear model 
+
+```{r}
+#x <- rnorm(20, 10, 4)
+x <- seq(from = -1, to =1, by =0.1)
+a <- 0
+b <- 2
+y <- a + b*x
+
+plot(x, y, type = "l", lty = 1)
+
+```
+
+
+You can also plot each of the data points which fall on the line as well
+
+```{r}
+plot(y~x)
+```
+
+
+What happens if you change the formula.
+
+```{r}
+x <- seq(from = -1, to =1, by =0.1)
+a <- 0
+b <- 2
+y <- a + b*x^2
+plot(x, y, type = "l", lty = 1)
+
+```
+
+To produce what I have in the slides you just set the xlim differently.
+
+```{r}
+plot(x, y, type = "l", lty = 1, xlim = c(-1, 0))
+```
+
+Here's how I got the ldt file (but use your own path of course)
+
+```{r}
+install.packages("/Users/Adan Tallman/Desktop/Rling_1.0.tar.gz", repos = NULL, type = "source")
+library(Rling)
+data(ldt)
+write.csv(ldt, file="/Users/Adan Tallman/Desktop/ldt.csv")
+```
+
+Let's look at the data
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+glimpse(ldt)
+```
+```{r}
+summary(ldt)
+```
+```{r}
+head(ldt)
+```
+
+
+Let's plot the mn reaction time by the length of the word
+
+```{r}
+attach(ldt)
+plot(Mean_RT~Length)
+```
+
+Take a guess at where you think the line should be and what its coefficient should be.
+
+
+```{r}
+plot(ldt$Length, ldt$Mean_RT)+ abline(a=500, b=33, col="blue")
+```
+
+You can get the best fit relationship by using lm()
+
+```{r}
+lm(Mean_RT~Length, data=ldt)
+```
+
+You can graph it in ggplot with the following code
+
+```{r}
+ggplot(ldt, aes(x=Length, y = Mean_RT))+
+geom_point(shape=1, size=3)+stat_smooth(method=lm)
+```
+But how do you get the best fit? Go back to slides for discussion.
+
+
+
+```{r}
+library(truncnorm)
+
+set.seed(1)
+school <- sample(c("good", "bad"), size=30, replace=30)
+school.binary <- ifelse(school == "good", 1, 0)
+class.grade <- as.integer(rtruncnorm(a=0, b=100, m = 40, sd=15, n =30))
+intercept <- 0
+b1 <- 15
+b2 <- 1
+error <- rnorm(m=0, sd=10, n=30)
+test.score <- intercept +  b1*school.binary +b2*class.grade + error
+test.score <- ifelse(test.score < 0, 0, test.score)
+test.score <- ifelse(test.score> 100, 100, test.score)
+test.score <- as.integer(test.score)
+data <- data.frame(test.score, school, class.grade)
+
+```
+
+
+```{r}
+ggplot(data,aes(class.grade, test.score)) +
+  geom_point()+
+  geom_smooth(method='lm')
+
+```
+
+```{r}
+
+ggplot(data,aes(class.grade, test.score)) +
+  geom_point()+
+  geom_smooth(method='lm')+
+  facet_wrap(~school)
+
+```
+
+```{r}
+plot(1:30,test.score,ylim=c(0,100),ylab="y",xlab="order",pch=21,bg="red")
+```
+
+```{r}
+plot(1:30,test.score,ylim=c(0,100),ylab="y",xlab="order",pch=21,bg="red")
+abline(h=mean(test.score),col="blue")
+for(i in 1:100) lines(c(i,i),c(mean(test.score),test.score[i]),col="green")
+
+```
+
+Total sum of squarees = SSY, the sum of all the lehgths of all the green lines
+
+```{r}
+SSY <- sum(test.score - mean(test.score))
+```
+
+
+
+```{r}
+plot(1:30,test.score,ylim=c(0,100),ylab="y",xlab="order", pch=21,bg= as.numeric(as.factor(school))+1 )
+abline(h=mean(test.score[school=="good"]),col="green")
+abline(h=mean(test.score[school=="bad"]), col="red")
+
+```
+
+```{r}
+SSEgood <- sum((test.score[school=="good"]-mean(test.score[school=="good"]))^2)
+SSEbad <- sum((test.score[school=="bad"]-mean(test.score[school=="bad"]))^2)
+SSE = SSEgood + SSEbad
+
+```
+
+```{r}
+SSG = SSY - SSE
+SSG
+```
+
+

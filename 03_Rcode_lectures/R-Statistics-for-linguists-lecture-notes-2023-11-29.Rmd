@@ -1,0 +1,147 @@
+---
+title: "R lecture notes 2023-11-29"
+author: "Adam Tallman"
+date: "2023-11-24"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lattice)
+library(Rling)
+library(languageR)
+elp.df <- read.csv("/Users/Adan Tallman/Desktop/ELP_full_length_frequency.csv")
+senses <- read.csv("/Users/Adan Tallman/Desktop/winter_2016_senses_valence.csv")
+```
+
+## Linear models
+
+A deductive versus a statistical model can be seen by simulation.
+
+```{r}
+##Deductive model
+x <- seq(from=1, to=20)
+b <- 1
+a <- 0
+y <- a + b*x
+plot(y~x)+lines(y,x)
+```
+
+Simulating a stochastic model would look like this.
+
+```{r}
+##Statistical model
+
+x <- seq(from=1, to=20)
+b <- 1
+a <- 0
+e <- rnorm(m=0,sd=3, n=20)
+y <- a + b*x + e
+plot(y~x)+abline(y,x)
+```
+
+Those error terms are the ``residuals"` that we discussed last lecture.
+
+```{r}
+y_hat <- predict(lm(y~x))
+residuals <- y - y_hat
+
+error_residuals <- make.groups(e, residuals)
+
+ggplot(error_residuals, aes(x=data, fill=which))+
+  geom_density(alpha=0.3)
+```
+
+How do I know that my line is making predictions
+
+```{r}
+##Line through unrelated vectors
+x <- rnorm(20, 10, 4)
+y <- rnorm(20, 5, 3)
+plot(y~x)+abline(a=4, b=0.2)
+
+```
+
+How do we know when our line explains anything? Let's look at the ldt database. We can visualize the variance by using a straight line through the datapoints. The x-axis is just the order of elements in the vector. 
+
+```{r}
+data(ldt)
+RT <- ldt$Mean_RT
+plot(1:100,RT,ylim=c(500,1500),ylab="y",xlab="order",pch=21,bg="darkred")
+abline(h=mean(RT),col="darkblue")
+for(i in 1:100) lines(c(i,i),c(mean(RT),RT[i]),col="darkgreen")
+```
+You are calculating the overall distance the points are from the mean.
+
+```{r}
+var(RT)
+```
+
+```{r}
+Length <- ldt$Length
+plot(Length,RT,pch=21,bg="darkblue")
+abline(lm(RT~Length),col="darkgreen")
+fitted <- predict(lm(RT~Length))
+lines(c(0,0),c(12,11.755556))
+for (i in 1:100)
+  lines (c(Length[i],Length[i]),c(RT[i],fitted[i]),col="darkred")
+```
+```{r}
+sqrt(sum((RT-fitted)^2))
+```
+I will give an overview of how to read an lm() model below.
+
+```{r}
+model_1 <- lm(Mean_RT~Length, data=ldt)
+summary(model_1)
+```
+
+## Analysis of Variance
+
+```{r}
+head(senses)
+tail(senses)
+```
+
+How to imagine your null model? It would just be a model that tried to predict every VAL from the mean of all the values. You can visual this as a line going through the mean.
+
+```{r}
+senses_01 <- filter(senses, Modality =="Taste" | Modality =="Sound")
+modality <- senses_01$Modality
+Val <- senses_01$Val
+plot(1:114,Val,ylim=c(4,7),ylab="y",xlab="order",pch=21,bg="darkred")
+abline(h=mean(Val),col="darkblue") 
+for(i in 1:114) 
+  lines(c(i,i),c(mean(Val),Val[i]),col="darkgreen")
+```
+The variances are distances from the mean visualized as lines in the plot above. The overall varianxes will be difference if you split the data into groups, which can be visualized as different lines.
+
+```{r}
+
+senses_01 <- filter(senses, Modality =="Taste" | Modality =="Sound")
+modality <- senses_01$Modality
+Val <- senses_01$Val
+plot(1:114,Val,ylim=c(5,6.5),ylab="Val",xlab="order", pch=21,bg= as.numeric(as.factor(modality))+1 )
+#abline(h=mean(Val[modality=="Sight"]),col="darkgreen")
+#abline(h=mean(Val[modality=="Smell"]), col="darkred")
+abline(h=mean(Val[modality=="Sound"]), col="red")
+#abline(h=mean(Val[modality=="Taste"]), col="cornflowerblue")
+abline(h=mean(Val[modality=="Taste"]), col="green")
+```
+
+```{r}
+#index <- 1:length(ozone)
+#for (i in 1:length(index)){
+#if (garden[i] == "A")
+#lines(c(index[i],index[i]),c(mean(ozone[garden=="A"]),ozone
+#[i]))
+#else
+#lines(c(index[i],index[i]),c(mean(ozone[garden=="B"]),ozone
+#[i]), col="red")
+#}
+```
+
