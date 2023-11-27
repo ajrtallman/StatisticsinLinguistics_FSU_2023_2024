@@ -35,11 +35,11 @@ Simulating a stochastic model would look like this.
 
 ```{r}
 ##Statistical model
-
+set.seed(12345)
 x <- seq(from=1, to=20)
 b <- 1
 a <- 0
-e <- rnorm(m=0,sd=3, n=20)
+e <- rnorm(m=0,sd=2, n=20)
 y <- a + b*x + e
 plot(y~x)+abline(y,x)
 ```
@@ -60,6 +60,7 @@ How do I know that my line is making predictions
 
 ```{r}
 ##Line through unrelated vectors
+set.seed(12345)
 x <- rnorm(20, 10, 4)
 y <- rnorm(20, 5, 3)
 plot(y~x)+abline(a=4, b=0.2)
@@ -113,7 +114,7 @@ How to imagine your null model? It would just be a model that tried to predict e
 senses_01 <- filter(senses, Modality =="Taste" | Modality =="Sound")
 modality <- senses_01$Modality
 Val <- senses_01$Val
-plot(1:114,Val,ylim=c(4,7),ylab="y",xlab="order",pch=21,bg="darkred")
+plot(1:114,Val,ylim=c(4,7),ylab="Val",xlab="order",pch=21,bg="darkred")
 abline(h=mean(Val),col="darkblue") 
 for(i in 1:114) 
   lines(c(i,i),c(mean(Val),Val[i]),col="darkgreen")
@@ -125,23 +126,81 @@ The variances are distances from the mean visualized as lines in the plot above.
 senses_01 <- filter(senses, Modality =="Taste" | Modality =="Sound")
 modality <- senses_01$Modality
 Val <- senses_01$Val
-plot(1:114,Val,ylim=c(5,6.5),ylab="Val",xlab="order", pch=21,bg= as.numeric(as.factor(modality))+1 )
+plot(1:114,Val,ylim=c(5,6.5),ylab="Val",xlab="order", pch=21,bg= as.numeric(as.factor(modality)))
 #abline(h=mean(Val[modality=="Sight"]),col="darkgreen")
 #abline(h=mean(Val[modality=="Smell"]), col="darkred")
-abline(h=mean(Val[modality=="Sound"]), col="red")
+abline(h=mean(Val[modality=="Sound"]), col="black")
 #abline(h=mean(Val[modality=="Taste"]), col="cornflowerblue")
-abline(h=mean(Val[modality=="Taste"]), col="green")
+abline(h=mean(Val[modality=="Taste"]), col="red")
 ```
 
 ```{r}
-#index <- 1:length(ozone)
-#for (i in 1:length(index)){
-#if (garden[i] == "A")
-#lines(c(index[i],index[i]),c(mean(ozone[garden=="A"]),ozone
-#[i]))
-#else
-#lines(c(index[i],index[i]),c(mean(ozone[garden=="B"]),ozone
-#[i]), col="red")
-#}
+senses_01 <- filter(senses, Modality =="Taste" | Modality =="Sound")
+modality <- senses_01$Modality
+Val <- senses_01$Val
+plot(1:114,Val,ylim=c(5,6.5),ylab="Val",xlab="order", pch=21,bg= as.numeric(as.factor(modality)))
+#abline(h=mean(Val[modality=="Sight"]),col="darkgreen")
+#abline(h=mean(Val[modality=="Smell"]), col="darkred")
+abline(h=mean(Val[modality=="Sound"]), col="black")
+#abline(h=mean(Val[modality=="Taste"]), col="cornflowerblue")
+abline(h=mean(Val[modality=="Taste"]), col="red")
+index <- 1:length(Val)
+for (i in 1:length(index)){
+if (modality[i] == "Sound")
+  lines(c(index[i],index[i]),c(mean(Val[modality=="Sound"]),Val
+[i]))
+else
+  lines(c(index[i],index[i]),c(mean(Val[modality=="Taste"]),Val
+[i]), col="red")
+}
 ```
+
+The difference can be formalized as the error sum of squares.
+
+
+$$ SSE = \sum^k_{j=1} \sum(y - \overline{y}_j)^2 $$
+
+Here's a way of calculating it using base R functions
+
+```{r}
+sound <- senses_01[senses_01$Modality=="Sound",]
+taste <- senses_01[senses_01$Modality=="Taste",]
+residuals_Sound <- sound$Val - mean(sound$Val)
+residuals_Taste <- taste$Val - mean(taste$Val)
+error_sum_of_squares <- sum(residuals_Sound^2) + sum(residuals_Taste^2)
+error_sum_of_squares
+```
+The `analysis' part of the `Analysis of Variance' involves comparing this number to the total sum of squares.
+
+
+```{r}
+total_sum_of_squares <- sum((senses_01$Val - mean(senses_01$Val))^2)
+```
+
+The part of the variance that is explained by the different is called the ``treatment sum of squares', and that's just the the total sum of squares minus the error sum of squares.
+
+```{r}
+treatment_sum_of_squares <- total_sum_of_squares - error_sum_of_squares
+```
+
+
+Basically the F-statistic is as follows
+
+$$F = \frac{\textrm{Variance explained}}{\textrm{Variance of error}} $$
+
+
+You calculate the variance by dividing the sum of squares by their degrees of freedom.
+
+```{r}
+F_ratio <- treatment_sum_of_squares / (error_sum_of_squares/112)
+```
+
+
+And there is a function in R that can do this.
+
+```{r}
+summary(aov(Val~Modality, data=senses_01))
+```
+
+
 
