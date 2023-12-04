@@ -14,8 +14,12 @@ library(tidyverse)
 library(lattice)
 library(Rling)
 library(languageR)
+library(nhstplot)
+library(reshape)
 elp.df <- read.csv("/Users/Adan Tallman/Desktop/ELP_full_length_frequency.csv")
 senses <- read.csv("/Users/Adan Tallman/Desktop/winter_2016_senses_valence.csv")
+data(ldt)
+data(sharedref)
 ```
 
 ## Linear models
@@ -195,6 +199,10 @@ You calculate the variance by dividing the sum of squares by their degrees of fr
 F_ratio <- treatment_sum_of_squares / (error_sum_of_squares/112)
 ```
 
+```{r}
+plotftest(f = 49.54, dfnum = 1, dfdenom = 112)
+```
+
 
 And there is a function in R that can do this.
 
@@ -202,5 +210,51 @@ And there is a function in R that can do this.
 summary(aov(Val~Modality, data=senses_01))
 ```
 
+## Chi-squared test
+
+Let's take a look at some of the data from Matthew Dryer's paper on word order correlations.
+
+```{r}
+adpos <- matrix(c(107,12,7,70),ncol=2,byrow=TRUE)
+rownames(adpos)<-c("PostP","Prep")
+colnames(adpos)<-c("OV","VO")
+adpos
+```
+```{r}
+wordorder <- cbind(c(107, 7), c(12, 70))
+rownames(wordorder) <- c("Postp", "Prep")
+colnames(wordorder) <- c("OV", "VO")
+wordorder <- rbind(wordorder, c(114,82))
+wordorder <- cbind(wordorder, c(119,77,196))
+rownames(wordorder) <- c("PostP", "Prep", "Column Total")
+colnames(wordorder) <- c("OV", "VO", "Row total")
+wordorder
+```
+Here's how we create the expected frequencies
+
+```{r}
+E <- cbind(c((114*119)/196, (114*77)/196), 
+           c(82*119/196,(82*77)/196))
+rownames(E) <- c("Postp", "Prep")
+colnames(E) <- c("OV", "VO")
+E
+```
+
+```{r}
+E.df <- melt(E)
+colnames(E.df)<-c("Adposition", "Verb.Object", "Expected.Frequency")
+E.df$Observed.Frequency <- c(107,7,12,70)
+E.df
+```
 
 
+$$ \chi^2 = \sum\frac{(Observed - Expected)^2}{Expected} $$
+
+```{r}
+E.df$oe <- ((E.df$Observed.Frequency - E.df$Expected.Frequency)^2) / E.df$Expected.Frequency
+sum(E.df$oe)
+```
+
+```{r}
+chisq.test(adpos)
+```
