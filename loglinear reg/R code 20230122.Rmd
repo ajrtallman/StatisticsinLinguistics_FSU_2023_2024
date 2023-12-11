@@ -1,0 +1,341 @@
+---
+title: "R lecture notes 2023 01 23"
+author: "Adam Tallman"
+date: "2023-01-23"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Ways of simulating binary data
+
+You can use the sample() function.
+
+```{r}
+sample(c(0,1), size=20,replace=TRUE,prob = c(0.3,0.7))
+```
+
+You can use the rbinom() function.
+
+```{r}
+rbinom(n=20, size=1, prob=0.7)
+```
+
+
+## Log / Exponent function
+
+Logistic regression model is about telling us where the probability changes conditional on other variables.
+
+There are two functions - the logarithmic function and the exponential function. They can reverse.
+
+```{r}
+t <- log(10)
+t
+exp(t)
+```
+
+
+
+
+## Logistic regression
+
+
+# Odds plot
+
+If you want to understand the relationship between normal numbers and logs. You can plot the relationship with the following code.
+
+First make a bunch of numbers from 0 to 1.
+
+```{r}
+par(mfrow=c(1,1))
+x <- seq(0,1,by=0.1)
+```
+
+The odds are calculated with the formula 
+
+$$ \frac{1}{1-x} $$
+
+```{r}
+plot(x, 1/(1-x))
+```
+
+
+Or if its easier reverse the relationship.
+
+
+```{r}
+plot(1/(1-x),x)
+```
+
+# Plot logs
+
+```{r}
+x <- seq(0,1,by=0.1)
+plot(x,log(x))
+```
+# Plot exponentials
+
+```{r}
+x <- seq(-2,0, by =.1)
+plot(x, exp(x))
+```
+
+
+# Log odds
+
+
+```{r}
+par(mfrow=c(1,1))
+x <- seq(0,1,by=.02)
+plot(x,log(x/(1-x)))
+
+```
+
+```{r}
+plot(log(x/(1-x)),x)
+```
+# Exponential odds
+
+```{r}
+par(mfrow=c(1,1))
+x <- seq(-4,4,by=.1)
+plot(x, 1/(1+exp(-x)))
+```
+
+So the trick with log/exponential odds is that it can translate any numbers onto a 0 to 1 scale. This is useful if we want to ask questions about probability.
+
+## Adding a coefficient
+
+If you make the slope larger.
+
+```{r}
+par(mfrow=c(2,2))
+x <- seq(-4,4,by=.1)
+b <- 2
+plot(x, 1/(1+exp(-x*b)), main = "b = 2")
+b <- 8
+plot(x, 1/(1+exp(-x*b)), main = "b = 8")
+
+b <- 0.5
+plot(x, 1/(1+exp(-x*b)), main = "b = 0.5")
+
+b <- -1
+plot(x, 1/(1+exp(-x*b)), main = "b = -1")
+
+```
+
+## Logistic regression practice
+
+Let's make a model that predicts whether a student is going to class.
+
+```{r}
+set.seed(1)
+coffee <- rnorm(100, 15, 5)
+happiness <- rnorm(100, 10, 2)
+a <- -5
+b1 <- -1
+b2 <- 1
+```
+
+How do we translate the our continuous values onto predictions from 0 (no, they are not a postdoc) to 1 (yes the person is a postdoc).
+
+```{r}
+xb <- a + b1 * happiness + b2 * coffee + rnorm(100, 0, 0.1)  
+```
+
+Then we generate probabilities using logistic regression model.
+
+```{r}
+p <- 1/ (1+exp(-xb))
+summary(p)
+par(mfrow=c(1,1))
+plot(p)
+```
+
+```{r}
+gotoclass <- rbinom(n=100, size=1, prob=p)
+gotoclass
+```
+
+```{r}
+library(glm2)
+```
+
+```{r}
+model.logit <- glm(gotoclass~happiness+coffee, family="binomial")
+summary(model.logit)
+```
+
+## Interpreting logistic regression coefficients
+
+
+
+```{r}
+invlogit <- function (x) {1/(1+exp(-x))}
+invlogit(-4.1157 + -1.6263*mean(happiness) )
+```
+Divide by 4 gives you the maximum difference corresponding to a unit difference in happiness.
+
+```{r}
+-1.6263/4
+```
+
+## Visualization of logistic regression
+
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+data <- data.frame(gotoclass, happiness, coffee)
+```
+
+
+```{r}
+plotline<-ggplot(data, aes(x=coffee, y = gotoclass))+geom_point()+
+  geom_abline(intercept = 0.11105, slope = 0.076446, color="red", size=1)+ 
+  ylab("Probability of going to class") 
+plotline
+```
+
+
+```{r}
+plotS<-ggplot(data, aes(x=coffee, y= gotoclass))+ 
+  geom_point(alpha=.5)+
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial))+ 
+  ylab("Probability of going to class") 
+plotS
+```
+
+```{r}
+ggarrange(plotline, plotS)
+```
+
+## Interpreting logistic regression
+
+
+
+```{r}
+library(Rling);library(rms); library(visreg); library(car)
+```
+
+
+```{r}
+data(doenLaten)
+d <- doenLaten
+head(doenLaten)
+library(tidyverse)
+glimpse(d)
+d <- as.data.frame(d)
+model.glm <- glm(Aux~Causation*EPTrans*Country, data=d, family="binomial")
+summary(model.glm)
+```
+
+## How to make an S shaped curve without data
+
+
+```{r}
+x <- seq(-4,4,length.out=100)
+p <-1/(1+exp(-x))
+plot(x, p, type="l")
+```
+
+## Conditional inference tree
+
+```{r}
+chacobovowels <- read.csv("/Users/Adan Tallman/Desktop/chacobotonedata.csv", header=TRUE)
+summary(chacobovowels)
+```
+We load the package partykit in order to run conditional inference trees.
+
+
+```{r}
+library(partykit)
+head(chacobovowels)
+```
+
+
+Then we always want to only select the variables that we are going to analyze in our tree.
+
+```{r}
+chacobovowels.vars <- chacobovowels %>% select(., 
+                                          Speaker,
+                                          F0_mean, 
+                                          F0_slope, 
+                                          F0_highest_.Hz., 
+                                          Intensity_.dB.,
+                                          Vowel_duration_.s.,
+                                          F0_midpoint,
+                                          F0_at_end,
+                                          F0_at_start,
+                                          Tone)
+
+```
+
+Make sure to make all of your characters factors:
+
+```{r}
+chacobovowels.vars$Tone <- as.factor(chacobovowels.vars$Tone)
+chacobovowels.vars$Speaker <- as.factor(chacobovowels.vars$Speaker)
+```
+
+
+The code for creating a conditional inference tree is quite straightforward.
+
+```{r}
+Tree <- ctree(Tone ~ ., data = chacobovowels.vars)
+```
+
+
+```{r}
+plot(Tree)
+```
+```{r}
+library(ggparty)
+
+ggparty(Tree) +
+  geom_edge() +
+  geom_edge_label() +
+  geom_node_label(
+    line_list = list(
+      aes(label = splitvar),
+      aes(label = paste("N =", nodesize))
+    ),
+    line_gpar = list(
+      list(size = 13),
+      list(size = 10)
+    ),
+    ids = "inner"
+  ) +
+  geom_node_label(aes(label = paste0("Node ", id, ", N = ", nodesize)),
+    ids = "terminal", nudge_y = -0.3, nudge_x = 0.01
+  ) +
+  geom_node_plot(
+    gglist = list(
+      geom_bar(aes(x = "", fill = Tone),
+        position = position_fill(), color = "black"
+      ),
+      theme_minimal(),
+      scale_fill_manual(values = c("white", "red"), guide = FALSE),
+      scale_y_continuous(breaks = c(0, 1)),
+      xlab(""), ylab("Surface Tone"),
+      geom_text(aes(
+        x = "", group = Tone,
+        label = stat(count)
+      ),
+      stat = "count", position = position_fill(), vjust = 1.7
+      )
+    ),
+    shared_axis_labels = TRUE
+  )
+```
+
+
+

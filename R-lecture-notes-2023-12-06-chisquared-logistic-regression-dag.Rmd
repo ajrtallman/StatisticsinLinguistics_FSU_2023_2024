@@ -1,0 +1,390 @@
+---
+title: "R-lecture-notes-2023-12-06-chi-squared-logistic-regression"
+author: "Adam Tallman"
+date: "2023-12-04"
+output: word_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggdag)
+library(V8)
+library(dagitty)
+library(Rling)
+library(rms)
+library(visreg)
+library(car)
+```
+
+
+```{r}
+coord_dag <- list(
+  x = c(X = 2, Y = 2),
+  y = c(X = 3, Y = 1)
+)
+our_dag <- ggdag::dagify(Y ~ X,
+                         coords = coord_dag)
+ggdag::ggdag(our_dag) + theme_void()
+```
+
+
+```{r}
+coord_dag <- list(
+  x = c(X = 1, Y = 2, Z = 3),
+  y = c(X = 3, Y = 1, Z = 3)
+)
+our_dag <- ggdag::dagify(Y ~ X,
+                         Y ~ Z,
+                         coords = coord_dag)
+ggdag::ggdag(our_dag) + theme_void()
+```
+
+
+
+```{r}
+dag <- dagitty("dag {
+  X1 -> X2
+  X1 -> Y
+  X3 -> X2
+  X2 -> Y
+  X2 -> T -> Y
+  X3 -> T
+               }")
+plot( graphLayout( dag ) )
+```
+
+## Chi-squared test
+
+## Logistic regression
+
+
+```{r}
+mcf <- read.csv("/Users/Adan Tallman/Desktop/StatisticsinLinguistics_FSU_2023_2024/07_data/chacobo.mcf.df.csv")
+```
+
+Recode data as 0 vs. 1 and then extract the simuli. After this we pull out the pitch and the duration values using strsplit.
+
+```{r}
+response <- ifelse(mcf$response=="janáquë vomitó", 1, 0)
+stimulus <- str_remove_all(mcf$stimulus, "janaquë_")
+df <- as.data.frame(cbind(response, stimulus))
+df[c("Pitch_Hz", "Duration_ms")] <- str_split_fixed(df$stimulus, "_", 2)
+df$Pitch_Hz<-as.numeric(df$Pitch_Hz)
+df$response <- as.numeric(df$response)
+head(df)
+```
+
+
+```{r}
+ggplot(df, aes(jitter(Pitch_Hz), jitter(response))) +            
+  geom_point()+
+  stat_smooth(method="lm",
+              formula = y ~ x,
+              geom= "smooth")+
+  ylim(0,1)
+```
+
+
+```{r}
+plot(jitter(df$response)~jitter(df$Pitch_Hz), ylab="Response (0=accent first, 1=accent second)", xlab ="Frequency stimuli (Hz)", xlim=c(50,200), ylim=c(-2,2)) + abline(lm(response ~ Pitch_Hz, data = df))
+```
+
+
+
+
+
+
+There's certain aspects of this model that are not realistic. For instance, it makes predictions about when the response variable is lower than or higher than 0. What type of line would we want to best fit the data and to give an accurate assessment of the probability of 0 or 1 of the response variable given a value of x?
+
+```{r}
+bernouilli_data <- rbinom(20, 1, 0.5)
+print(bernouilli_data)
+```
+## Log / Exponent function
+
+Logistic regression model is about telling us where the probability changes conditional on other variables.
+
+There are two functions - the logarithmic function and the exponential function. They can reverse.
+
+```{r}
+t <- log(10)
+t
+exp(t)
+```
+
+## Logistic regression
+
+
+# Odds plot
+
+If you want to understand the relationship between normal numbers and logs. You can plot the relationship with the following code.
+
+First make a bunch of numbers from 0 to 1.
+
+```{r}
+par(mfrow=c(1,1))
+x <- seq(0,1,by=0.1)
+```
+
+The odds are calculated with the formula 
+
+$$ \frac{1}{1-x} $$
+
+```{r}
+plot(x, 1/(1-x))
+```
+
+
+Or if its easier reverse the relationship.
+
+
+```{r}
+plot(1/(1-x),x)
+```
+
+# Plot logs
+
+```{r}
+x <- seq(0,1,by=0.1)
+plot(x,log(x))
+```
+# Plot exponentials
+
+```{r}
+x <- seq(-2,0, by =.1)
+plot(x, exp(x))
+```
+
+
+# Log odds
+
+
+```{r}
+par(mfrow=c(1,1))
+x <- seq(0,1,by=.02)
+plot(x,log(x/(1-x)))
+
+```
+
+```{r}
+plot(log(x/(1-x)),x)
+```
+# Exponential odds
+
+```{r}
+par(mfrow=c(1,1))
+x <- seq(-4,4,by=.1)
+plot(x, 1/(1+exp(-x)))
+```
+
+So the trick with log/exponential odds is that it can translate any numbers onto a 0 to 1 scale. This is useful if we want to ask questions about probability.
+
+## Adding a coefficient
+
+If you make the slope larger.
+
+```{r}
+par(mfrow=c(2,2))
+x <- seq(-4,4,by=.1)
+b <- 2
+plot(x, 1/(1+exp(-x*b)), main = "b = 2")
+b <- 8
+plot(x, 1/(1+exp(-x*b)), main = "b = 8")
+
+b <- 0.5
+plot(x, 1/(1+exp(-x*b)), main = "b = 0.5")
+
+b <- -1
+plot(x, 1/(1+exp(-x*b)), main = "b = -1")
+
+```
+
+```{r}
+par(mfrow=c(1,2))
+x <- seq(-6,6,by=.1)
+b <- 1
+a <- 0
+plot(x, 1/(1+exp(-x*b-a)), main = "b = 1, a = 0")
+b <- 1
+a <- 2
+plot(x, 1/(1+exp(-x*b-a)), main = "b = 1, a = 2")
+
+```
+
+```{r}
+b <- 1
+a <- 1
+y <- 1/(1+exp(-a-x*b))
+glm(y~x)
+```
+
+
+
+
+## Logistic regression practice
+
+Let's make a model that predicts whether a student is going to class.
+
+```{r}
+set.seed(1)
+coffee <- rnorm(100, 15, 5)
+happiness <- rnorm(100, 10, 2)
+a <- -5
+b1 <- -1
+b2 <- 1
+```
+
+How do we translate the our continuous values onto predictions from 0 (no, they are not a postdoc) to 1 (yes the person is a postdoc).
+
+```{r}
+xb <- a + b1 * happiness + b2 * coffee + rnorm(100, 0, 0.1)  
+```
+
+Then we generate probabilities using logistic regression model.
+
+```{r}
+p <- 1/ (1+exp(-xb))
+summary(p)
+par(mfrow=c(1,1))
+plot(p)
+```
+
+```{r}
+gotoclass <- rbinom(n=100, size=1, prob=p)
+gotoclass
+```
+
+```{r}
+library(glm2)
+```
+
+```{r}
+model.logit <- glm(gotoclass~happiness+coffee, family="binomial")
+summary(model.logit)
+```
+
+## Interpreting logistic regression coefficients
+
+
+```{r}
+invlogit <- function (x) {1/(1+exp(-x))}
+invlogit(-4.1157)     
+```
+
+
+
+```{r}
+invlogit <- function (x) {1/(1+exp(-x))}
+invlogit(-4.1157 + -1.6263*mean(happiness) + 1.3600*mean(coffee))
+```
+
+```{r}
+-1.6263*mean(happiness) 
+```
+```{r}
+1.3600*mean(coffee)
+```
+
+
+
+Divide by 4 gives you the maximum difference corresponding to a unit difference in happiness.
+
+```{r}
+-1.6263/4
+```
+
+## Visualization of logistic regression
+
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+```
+
+
+```{r}
+par(mfrow=c(1,2))
+data <- data.frame(gotoclass, happiness, coffee)
+```
+
+
+```{r}
+plotline<-ggplot(data, aes(x=coffee, y = gotoclass))+geom_point()+
+  geom_abline(intercept = 0.11105, slope = 0.076446, color="red", size=1)+ 
+  ylab("Probability of going to class") 
+plotline
+```
+
+
+```{r}
+plotS<-ggplot(data, aes(x=coffee, y= gotoclass))+ 
+  geom_point(alpha=.5)+
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial))+ 
+  ylab("Probability of going to class") 
+plotS
+```
+
+```{r}
+ggarrange(plotline, plotS)
+```
+
+## Interpreting logistic regression
+
+
+
+```{r}
+library(Rling);library(rms); library(visreg); library(car)
+```
+
+
+```{r}
+data(doenLaten)
+d <- doenLaten
+head(doenLaten)
+library(tidyverse)
+glimpse(d)
+d <- as.data.frame(d)
+model.glm <- glm(Aux~Causation*EPTrans*Country, data=d, family="binomial")
+summary(model.glm)
+```
+
+## Logistic regression on Forced Choice Experiment Chacobo
+
+```{r}
+head(df)
+```
+
+
+
+```{r}
+logit_model_01 <- glm(response~Pitch_Hz, data=df, family="binomial")
+summary(logit_model_01)
+```
+```{r}
+0.075658/4
+```
+
+```{r}
+invlogit(-9.109549+ 0.075658*mean(df$Pitch_Hz))
+```
+
+```{r}
+plotS<-ggplot(dat=df, aes(x=Pitch_Hz, y= response))+ 
+  geom_point(alpha=.5)+
+  stat_smooth(method="glm", se=FALSE, method.args = list(family=binomial))+ 
+  ylab("Probability of choosing janáquë") 
+plotS
+```
+
+
+
+
+## How to make an S shaped curve without data
+
+
+```{r}
+x <- seq(-4,4,length.out=100)
+p <-1/(1+exp(-x))
+plot(x, p, type="l")
+```
