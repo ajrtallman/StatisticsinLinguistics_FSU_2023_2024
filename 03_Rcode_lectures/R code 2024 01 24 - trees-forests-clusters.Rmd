@@ -1,0 +1,280 @@
+---
+title: "R lecture 2023 01 24 - exploratory data analysis"
+author: "Adam Tallman"
+date: "2023-01-24"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploratory data analysis
+
+## Algebra can be misleading, you need plots
+
+Linear models can give you very different results for very different data structures.
+
+```{r}
+par(mfrow=c(2,2))
+set.seed(3)
+x1 <- seq(4,14,by=1)
+y1 <- 3 + 0.5*x1+ rnorm(11,0,0.7)
+plot(x1,y1, xlim=c(0,20), ylim=c(0,16))
+abline(a=3, b = 0.5 )
+x2 <- c(4, 5,  6, 7, 8, 9,   10, 11,  12 ,13 ,  14)
+y2 <- c(3, 4.5, 6, 7.25, 8, 8.5, 9, 9.25, 9  ,8.5, 8)
+lm(y2~x2)
+plot(x2,y2, xlim=c(0,20), ylim=c(0,16))
+abline(a=3, b = 0.5 )
+x3 <- seq(4,14)
+y3 <- 4.75 + 0.25*x3
+y3[10] = 15
+lm(y3~x3)
+plot(x3,y3, xlim=c(0,20), ylim=c(0,16))
+abline(a=3, b = 0.5 )
+x4 <- rep(8,10)
+x4[11] <- 18 
+y4 <- seq(5,10, by =0.5)
+y4[11] <- 12.25
+lm(y4~x4)
+plot(x4,y4, xlim=c(0,20), ylim=c(0,16))
+abline(a=3.25, b = 0.5 )
+```
+
+## Graphs lie so you need algebra
+
+All of the following are from the same data, but you can give them different graphs depending on the breaks you apply.
+
+
+```{r}
+x5 <- c(1,1,2,2,3,3,4,4,5,5,5,5,6,6,6,6,6,6,7,7,7,7,8,8,9,9,10,10,11,11)
+par(mfrow=c(2,2))
+hist(x5, col="skyblue3")
+hist(x5, col="skyblue3", breaks=10)
+hist(x5, col="skyblue3", breaks=5)
+hist(x5, col="skyblue3", breaks=c(0,1,2,3,4,5,6,7,8,9,10,11))
+```
+
+## Hiding structure
+
+Plots can also hide structure. Consider the following boxplots
+
+```{r}
+group1 <- NULL
+group1$y <- c(11,11,10,10,9,9,8,8,7,7,7,7,6,6,6,6,6,6,5,5,5,5,4,4,3,3,2,2,1,1)
+group1 <- as.data.frame(group1)
+group1$group <- 1
+group2 <- NULL
+group2$y <- c(11,11,11,11,11,11,11, 8,8,8,8,8,8,8,8,4,4,4,4,4,4,4,4,1,1,1,1,1,1,1)
+group2 <- as.data.frame(group2)
+group2$group <- 2
+groups <- rbind(group1,group2)
+
+par(mfrow=c(1,2))
+boxplot(group1$y, xlab="Group 1")
+boxplot(group2$y, xlab= "Group 2")
+
+```
+
+The box plot is a graph based on a 5 number summary of  the data; the median, the fist and second quartile and the lowest and highest numbers or something else separating extreme values.
+
+A dot plot actually tells you more about the difference.
+
+```{r}
+library(ggplot2)
+
+ggplot(groups, aes(x=as.factor(group), y=y))+
+  geom_violin(trim=FALSE)+
+  geom_dotplot(binaxis='y', stackdir='center')
+```
+
+
+## Conditional inference and Random forests
+
+Let's open the iconicity data.
+
+
+```{r}
+icon.data <- read.csv("/Users/Adan Tallman/Desktop/StatisticsinLinguistics_FSU_2023_2024/07_data/perry_winter_2017_iconicity.csv", header=TRUE)
+head(icon.data)
+```
+
+
+
+```{r}
+library(partykit)
+library(tidyverse)
+```
+
+```{r}
+variables <- select(icon.data,
+                    POS,
+                    SER, 
+                    CorteseImag, 
+                    Conc, 
+                    Syst, 
+                    Freq, 
+                    Iconicity)
+variables$POS <- as.factor(variables$POS)
+
+variables <- drop_na(variables)
+variables <- variables %>% filter(POS == "Adjective" | POS =="Noun" | POS == "Verb")
+
+```
+
+```{r}
+icontree <- ctree(Iconicity~POS+Freq, data=variables) 
+plot(icontree)
+
+```
+
+
+```{r}
+library(randomForest)
+library(party)
+```
+
+We do random forests because, conditional inference trees are unstable - meaning they are heavily dependent on the sample. A random forest does lots of conditional inference trees based on subsampling the data in different ways.
+
+
+```{r}
+set.seed(1234)
+
+icon.rf <- cforest(Iconicity~POS+Freq+SER+CorteseImag+Syst, data=variables, controls=cforest_unbiased(ntree=100, mtry=2))
+
+```
+
+
+
+```{r}
+icon.rf.var.importance <- varimp(icon.rf)
+dotchart(sort(icon.rf.var.importance),main="Conditonal importance of variables")
+```
+
+```{r}
+rf.predictions <- predict(icon.rf)
+
+summary(lm(rf.predictions~variables$Iconicity))
+
+```
+
+## Clustering
+
+## Hierarchical clustering simulations
+
+Let's simulate some data.
+
+```{r}
+set.seed(4321)
+x <- rnorm(12, rep(1:3, each = 4), 0.2)
+y <- rnorm(12, rep(c(1, 2, 1), each = 4), 0.2)
+plot(x, y, col = "pink", pch = 19, cex = 2)
+text(x + 0.05, y + 0.05, labels = as.character(1:12))
+```
+
+Clustering methods start with calculating the distance between every point - here's different methods for doing this. But here's some code for doing it.
+
+```{r}
+dataFrame <- data.frame(x=x, y=y)
+dist(dataFrame)
+rdistxy <- as.matrix(dist(dataFrame))
+```
+We have to remove the diagonal from consideration.
+
+```{r}
+diag(rdistxy)
+
+diag(rdistxy) <- diag(rdistxy) + 100000
+```
+
+Then the algorithm would find the points which have the minimum distance between them.
+
+```{r}
+ind <- which(rdistxy == min(rdistxy), arr.ind = TRUE)
+ind
+par(mfrow = c(1, 2))
+```
+
+```{r}
+plot(x, y, col = "pink", pch = 19, cex = 2)
+text(x + 0.05, y + 0.05, labels = as.character(1:12))
+points(x[ind[1, ]], y[ind[1, ]], col = "purple", pch = 19, cex = 2)
+```
+
+
+```{r}
+hcluster <- dist(dataFrame)
+dendro <- as.dendrogram(hclust(hcluster))
+plot(cut(dendro, h = 0.4)$lower[[3]])
+```
+
+After this the algorithm would find the next closest points.
+
+```{r}
+nextmin <- rdistxy[order(rdistxy)][7]
+ind2 <- which(rdistxy == nextmin,arr.ind=TRUE)
+ind2
+```
+``Agglomeration" means grouping two points into one and then we find the next point.
+
+```{r}
+par(mfrow = c(1, 2))
+plot(x, y, col = "pink", pch = 19, cex = 2)
+text(x + 0.05, y + 0.05, labels = as.character(1:12))
+points(x[ind[1, ]], y[ind[1, ]], col = "purple", pch = 19, cex = 2)
+
+plot(x, y, col = "pink", pch = 19, cex = 2)
+text(x + 0.05, y + 0.05, labels = as.character(1:12))
+points(x[ind[1, ]], y[ind[1, ]], col = "purple", pch = 19, cex = 2)
+symbols(x=c(2.93), y=c(1), circles=0.12, add=T, inches=F, pch=20, bg="pink")
+```
+
+So the next agglomeration would look like this:
+
+```{r}
+par(mfrow = c(1, 2))
+
+plot(x, y, col = "pink", pch = 19, cex = 2)
+text(x + 0.05, y + 0.05, labels = as.character(1:12))
+points(x[ind[1, ]], y[ind[1, ]], col = "purple", pch = 19, cex = 2)
+symbols(x=c(2.93), y=c(1), circles=0.12, add=T, inches=F, pch=20, bg="pink")
+points(x[ind2[1, ]], y[ind2[1, ]], col = "purple", pch = 19, bg = "purple", cex=2)
+
+plot(x, y, col = "pink", pch = 19, cex = 2)
+text(x + 0.05, y + 0.05, labels = as.character(1:12))
+points(x[ind[1, ]], y[ind[1, ]], col = "purple", pch = 19, cex = 2)
+symbols(x=c(2.93), y=c(1), circles=0.12, add=T, inches=F, pch=20, bg="purple")
+points(x[ind2[1, ]], y[ind2[1, ]], col = "purple", pch = 19, bg = "purple", cex=2)
+```
+
+```{r}
+par(mfrow = c(1, 3))
+
+plot(x, y, col = "pink", pch = 19, cex = 2)
+text(x + 0.05, y + 0.05, labels = as.character(1:12))
+symbols(x=c(2.93), y=c(1), circles=0.12, add=T, inches=F, pch=20, bg="purple")
+symbols(x=c(3.15), y=c(1.1), circles=0.15, add=T, inches=F, pch=20, bg="purple", cex=2)
+
+plot(x, y, col = "pink", pch = 19, cex = 2)
+text(x + 0.05, y + 0.05, labels = as.character(1:12))
+points(x[ind[1, ]], y[ind[1, ]], col = "purple", pch = 19, cex = 2)
+symbols(x=c(2.93), y=c(1), circles=0.12, add=T, inches=F, pch=20, bg="pink")
+points(x[ind2[1, ]], y[ind2[1, ]], col = "purple", pch = 19, bg = "purple", cex=2)
+symbols(x=c(3.15), y=c(1.1), circles=0.15, add=T, inches=F, pch=20, bg="pink", cex=2)
+
+hcluster <- dist(dataFrame)
+clusters <- hclust(hcluster)
+
+dendro <- as.dendrogram(clusters)
+plot(cut(dendro, h = 0.5)$lower[[3]])
+```
+
+
+```{r}
+par(mfrow = c(1, 1))
+
+plot(dendro)
+```
+
+

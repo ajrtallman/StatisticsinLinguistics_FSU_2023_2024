@@ -1,0 +1,228 @@
+---
+title: "R lecture 2023 01 17 (multilevel models)"
+author: "Adam Tallman"
+date: "2023-01-16"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Linear model (perfect prediction)
+
+```{r}
+x <- rnorm(50, m =10, sd = 3)
+a = 10
+b = 1
+y <- a+b*x 
+plot(y~x)
+abline(coef(lm(y~x)))
+```
+
+
+```{r}
+x1 <- rnorm(50, m =10, sd = 3)
+a1 = 10
+b1 =1
+e1 <- rnorm(n=50, m=0, sd=1) #Add an error term
+y1 <- a1+b1*x1 +e1
+data1 <- data.frame(x1,y1)
+plot(y1~x1)
+abline(coef(lm(y1~x1)))
+title("some error")
+
+
+```
+```{r}
+x2 <- rnorm(50, m =10, sd = 3)
+a2 = 10
+b2 =1
+e2 <- rnorm(n=50, m=0, sd=4)
+y2 <- a2+b2*x2 +e2
+data2 <- data.frame(x2,y2)
+data2$group = "large.residuals"
+plot(y2~x2)
+abline(coef(lm(y~x)))
+title("more error")
+
+```
+
+
+
+
+```{r}
+ldt <- read.csv("/Users/Adan Tallman/Desktop/levshina.ldt.csv", header=TRUE)
+
+head(ldt)
+
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+ggplot(ldt, aes(Mean_RT, Length))+
+  geom_point()+
+  geom_smooth(method="lm")
+```
+
+## Phoneme inventory
+
+
+```{r}
+df <- read.csv("/Users/Adan Tallman/Desktop/inventories.clean.csv", header=TRUE)
+```
+
+
+It looks  like there is a positive correlation between log population and log phoneme inventory. As the population of speakers increases the number of phonemes of their respective language increases.
+
+```{r}
+plot.pooleddata <- ggplot(df, aes(x=logpop, y=loginv))+
+  geom_point()+
+  geom_smooth(method="lm",se=FALSE)
+plot.pooleddata
+```
+
+Let's create a model with log population versus log phoneme inventory.
+
+```{r}
+model.ols1<-lm(loginv~logpop, data=df) # ols = ordinary least squares regression
+summary(model.ols1)
+```
+## Subsetting by language
+
+```{r}
+df.lgsubset <- subset(df, family.name == "Indo-European"|
+            	family.name =="Uto-Aztecan"|
+            	family.name == "Atlantic-Congo"|
+            	family.name == "Sino-Tibetan"|
+            	family.name == "Otomanguean"|
+            	family.name == "Austronesian"|
+            	family.name == "Pama-Nyungan"|
+            	family.name == "Austroasiatic"|
+            	family.name =="Arawakan"|
+            	family.name == "Pano-Tacanan")
+
+```
+
+
+```{r}
+library(viridis)
+library(tidyverse)
+df.lgsubset %>%
+  ggplot(aes(x=loginv,
+         	y=logpop,
+         	color=family.name))+
+  geom_point()+
+  geom_smooth(method="lm",se = FALSE)+
+  scale_colour_viridis_d()
+```
+
+Another way we can see the variation in groups is by looking at regression models for each group.
+
+```{r}
+plot <- ggplot(df.lgsubset, aes(x=loginv, y=logpop, group=family.name))+
+  geom_point()+
+  geom_smooth(method="glm",se = FALSE)
+plot +  facet_wrap(~ family.name, ncol=3)
+```
+
+We can also look at differences between areas.
+
+```{r}
+df.areasubset <- subset(df, area !="")
+plot <- ggplot(df.areasubset, aes(x=loginv, y=logpop, group=area))+
+  geom_point()+
+  geom_smooth(method="glm",se = FALSE)
+plot +  facet_wrap(~ area, ncol=3)
+```
+
+
+```{r}
+library(lme4)
+library(lmerTest)
+
+```
+## Multilevel model
+
+One disadvantage of multilevel models is that their complexity makes them hard to interpret.
+
+Its typical to AICs in order to assess multilevel models. These are multilevel models without the predictor variable.
+
+
+```{r}
+mod.lmer.null1 <- lmer(loginv~(1|family.name)+ (1|area), data=df)
+mod.lmer.null2 <- lmer(loginv~(1|family.name), data=df)
+mod.lmer.null3 <- lmer(loginv~(1|area), data=df)
+```
+
+```{r}
+anova(mod.lmer.null1,
+      mod.lmer.null2,
+      mod.lmer.null3)
+```
+The first null model is the best because  it has the lowest AIC and lowest BIC.
+
+
+```{r}
+mod.lmer.a <- lmer(loginv~logpop+(1|family.name)+(1|area), data=df) #This is the code for a varying intercept model
+
+
+mod.lmer.ab <- lmer(loginv~logpop+(1+logpop|family.name) +(1+logpop|area),data=df) #This is the code for a varying intercept and slope model
+
+```
+```{r}
+summary(mod.lmer.a)
+```
+```{r}
+summary(mod.lmer.ab)
+```
+
+So the correlation is still weakly statistically significant.
+
+```{r}
+anova(mod.lmer.null1, mod.lmer.a, mod.lmer.ab)
+```
+According to the BIC the null model accounts for the variation better than the models with the predictor variables.
+
+## Coefficients from a multilevel model
+
+There isn't just a single coefficient for a multilevel model
+
+```{r}
+beta1 <- coef(mod.lmer.ab)$family.name
+colnames(beta1) <- c("Intercept", "Slope")
+
+beta2 <- coef(mod.lmer.ab)$area
+colnames(beta2) <- c("Intercept", "Slope")
+```
+
+If we plot the coefficients we can see that they follow a normal distribution.
+
+```{r}
+library(gridExtra)
+p1 <- ggplot(beta1, aes(Slope))+
+  geom_density(fill="slategray2", color="slategray2", alpha=0.8)+
+  ggtitle("Random slopes by linguistic family")
+
+
+p2 <- ggplot(beta1, aes(Intercept))+
+  geom_density(fill="slategray2", color="slategray2", alpha=0.8)+
+  ggtitle("Random intercepts by linguistic family")
+
+p3 <- ggplot(beta2, aes(Slope))+
+  geom_density(fill="slategray2", color="slategray2", alpha=0.8)+
+  ggtitle("Random slopes by area")
+
+p4 <- ggplot(beta2, aes(Intercept))+
+  geom_density(fill="slategray2", color="slategray2", alpha=0.8)+
+  ggtitle("Random intercepts by area")
+
+grid.arrange(p1, p2, p3, p4, ncol=2)
+```
+

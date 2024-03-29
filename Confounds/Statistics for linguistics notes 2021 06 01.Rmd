@@ -1,0 +1,188 @@
+---
+title: "Statistics for Linguistics 2021-06-01"
+author: "Adam Tallman"
+date: "31/05/2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+Last class we talked about multiple regression, causal inference, model selection procedures and interactions. Today we will introduce the notion of a generalized linear model, logistic regression and continue with a few points about causal inference, including Simpson's paradox.
+
+## Causal inference overview
+
+One of the important functions of multiple regression is to help us infer whether certain correlations between variables are spurious or not. Causal inference consists partially involves a set of graphical techniques for visualizing confounds. Last lecture we considered the The Fork and The Pipe. The Thor Fork is when you want to figure out the influence of X on Y, but a variable Z causes both of these variables. 
+
+```{r}
+library(ggdag)
+library(dagitty)
+dag <- dagitty("dag{
+  X -> Y
+  Z -> X
+  Z -> Y
+}")
+coordinates(dag) <-
+  list(x=c(X = 1, Y= 3, Z = 2), y=c(X = 1, Y=1, Z =2))
+ggdag(dag)+remove_axes()+remove_grid()
+```
+
+
+Z opens up a non-causal path between X and Y. You remove Z by conditioning on it, which in terms of a multiple regression translates into including Z in the model. 
+
+Last lecture we also considered a Pipe. A piped relationship is where you are interested in inferring the influence of X on Y, and there is another variable Z which is causally influenced by X and causally influences Y.
+
+```{r}
+dag <- dagitty("dag{
+  X -> Z
+  Z -> Y
+}")
+coordinates(dag) <-
+  list(x=c(X = 1, Y= 3, Z = 2), y=c(X = 1, Y=1, Z =2))
+ggdag(dag)+remove_axes()+remove_grid()
+```
+
+
+
+If this is your causal model, then you should not condition on Z, because this will block the causal relationship between the two variables. The relationship between X and Y mediated by Z is a causal relationship, in contrast to what we see with the fork about. To illustrate simulate the following data based on the causal relationship stated in the graph above.
+
+```{r}
+N <- 500
+x <- rnorm(N, 0, 5)
+a1 <- 2
+b1 <- 2
+z <- a1 + b1*x + rnorm(N,0,2)
+b2 <- 1.5
+a2 <- 2
+y <- a2 + b2*z + rnorm(N,0,4)
+plot(x,y)
+abline(lm(y~x))
+```
+
+The effect of x on y is strong as can be seen from the results of the following model.
+
+```{r}
+model.xy <- lm(y~x)
+summary(model.xy)
+```
+
+If you add the Z variable, the relationship between X and Y dissappears. 
+
+
+```{r}
+model.yxz <- lm(y~x+z)
+summary(model.yxz)
+```
+
+But it is wrong to conclude that X and Y do not bear a causal relationship with each other - it is just that the causal relationship is not a direct one. If you are interested in the effect that changing X will have on a change in Y, then you shouldn't condition on Z. The point is that how you interpret a statistical model, depends on the causal model you have in mind.
+
+Another type of confound is referred to as a collider effect. In certain respects this is the mirror image of the fork. You are interested in the causal effect of X on Y, but both of these cause Z. 
+
+```{r}
+dag <- dagitty("dag{
+  X -> Y
+  Z <- X
+  Z <- Y
+}")
+coordinates(dag) <-
+  list(x=c(X = 1, Y= 3, Z = 2), y=c(X = 1, Y=1, Z =2))
+ggdag(dag)+remove_axes()+remove_grid()
+```
+
+Let's say you are interested in the causal relationship between two covid symptoms. Let's say you think that if you lose your taste, you are more likely (or less likely to have backpain).
+
+```{r}
+set.seed(115)
+n <- 200
+notaste <- rnorm(n)
+backpain <- rnorm(n)
+```
+
+Now consider the effect that having a loss in taste sensation and/or backpain could have on whether you end up in the hospital.
+
+```{r}
+p <- 0.2 #proportion of people who go to hospital
+z <- notaste + backpain #measure of overall discomfort 
+q <- quantile(z, 1-p)
+h <- ifelse(z>=q, TRUE, FALSE)
+model <- lm(backpain[h]~notaste[h])
+```
+
+```{r}
+model.collider <- lm(backpain~notaste+h)
+summary(model.collider)
+```
+
+The model suggests that there is a negative correlation between back pain and having no taste as if having no taste relieves back pain. But this is a spurious correlation based on **adding** a factor to our model. On conditioning on a collider.
+
+```{r}
+dag <- dagitty("dag{
+  T -> B
+  H <- T
+  H <- B
+}")
+coordinates(dag) <-
+  list(x=c(T = 1, B = 3, H = 2), y=c(T = 1, B=1, H =2))
+ggdag(dag)+remove_axes()+remove_grid()
+```
+
+
+## Generalized linear model
+
+The function that we used lm() using a method called ordinary least squares regression. A generalized linear model is an extension of OLS. In generalized linear models, parameters are not chosen based on minimizing the sum of squares errors. Generalized linear models use maximum likelihood estimation to find the parameters of the model. MLE is an iterated fitting algorithm.
+
+To get an idea of what MLE is doing, the first starting point is understanding the distinction between probability and likelihood. Probability refers to 
+
+$$ pr(data|distribution) $$
+
+
+$$ L(distribution|data) $$
+
+## Logistic regression
+
+Logistic regression is used when the relationship between 
+
+$$ logit(y) = b_0 +b_1x_1 + b_2x_2 ... $$
+
+logit() stands for the log-odds. Odds are calculated as follows
+
+
+$$ logit(p) = log{\frac{p}{1-p}} $$
+
+$$ 2^x = 16 $$
+
+$$ log_2(16) = x $$
+
+log() in R gives you the natural log where the base is e (2.71828....)
+
+
+
+$$ P{\{y = 1|x}\} = \frac{1}{1+exp(-x\beta)} $$
+
+
+
+
+
+$$ Prob\{y = 1|x\} = \frac{1}{1+exp(-x\beta)} $$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
